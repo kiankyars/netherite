@@ -26,6 +26,7 @@
 #include "game/live_sim.h" /* minimal live entities + plant plot */
 #include "game/player_ctl.h"
 #include "game/runtime.h"
+#include "game/frame_capture.h"  /* gm_lightmap_lut: one builder for both paths */
 #include "game/screen.h"
 #include "game/script.h"
 #include "game/rl_mode.h"
@@ -104,7 +105,7 @@ static int render_layer(CrFramebuffer *fb, const CrCamera *cam,
  * updateFogColor noon color; see game/sky.h) DEFAULT ON; MAGMA_FOG=0 disables. */
 static int render_world(CrFramebuffer *fb, const CrCamera *cam, const GmMeshView *mv,
                          const CrTexture *atlas, CrScreenTri *tris, float time_of_day,
-                         const GmUnderwater *uw) {
+                         const GmUnderwater *uw, const CrRgba *lm) {
     int    fon = gm_terrain_fog_enabled();
     CrRgba fog = gm_terrain_fog_color(time_of_day);
     const float fst = GM_TERRAIN_FOG_START, fen = GM_TERRAIN_FOG_END;
@@ -114,7 +115,7 @@ static int render_world(CrFramebuffer *fb, const CrCamera *cam, const GmMeshView
 #define TSH(at, ly, bl) { .atlas = atlas, .fog_color = fog,                  \
                           .fog_start = fst, .fog_end = fen,                  \
                           .alpha_test = (at), .enable_fog = fon,             \
-                          .layer = (ly), .blend = (bl) }
+                          .layer = (ly), .blend = (bl), .lightmap = lm }
     CrShadeCtx sh_solid = TSH(0, CR_LAYER_SOLID,         0);
     /* mips off: oracle profiles pin mipmapLevels:0 */
     CrShadeCtx sh_cmip  = TSH(1, CR_LAYER_CUTOUT_MIPPED, 0);
@@ -363,8 +364,11 @@ int main(int argc, char **argv) {
      * function of the effective caps computed before the window opens. --- */
     cr_caps_load(getenv("MAGMA_CONF"));
     /* Shade-time lightmap (time-of-day terrain lighting). Game binaries opt
-     * in; MAGMA_LEGACY_LIGHTMAP=1 restores the noon-baked scalar path. */
-    worldmc_set_lightmap_mode(!getenv("MAGMA_LEGACY_LIGHTMAP"));
+     * in; MAGMA_LEGACY_LIGHTMAP=1 restores the noon-baked scalar path. The
+     * mode is a mesher AND a shade contract: with it on, terrain verts carry
+     * 0..15 levels, so the frame loop below must bind gm_lightmap_lut. */
+    const int lm_mode = !getenv("MAGMA_LEGACY_LIGHTMAP");
+    worldmc_set_lightmap_mode(lm_mode);
     const CrCaps *caps = cr_caps();
     if (cfg.view_distance > caps->view_radius) {
         fprintf(stderr, "error: requested view distance %d exceeds configured pool cap %d\n",
@@ -431,6 +435,9 @@ int main(int argc, char **argv) {
     }
 
     CrTexture atlas = gm_world_atlas(world);
+    /* Rebuilt from world time once per frame (allocate-once: one buffer for
+     * the whole run, never per frame). */
+    static CrRgba lm_lut[256];
     gm_input_reset();
     gm_hud_init();
 
@@ -748,7 +755,11 @@ int main(int argc, char **argv) {
         bench_stamp(5);
         GmMeshView mv; gm_world_mesh_view(world, &cam, fb_w, fb_h, &mv);
         bench_stamp(6);
-        int ntris = render_world(&fb, &cam, &mv, &atlas, tris, day, &uw);
+        /* Same texels game/frame_capture.c binds for this world time. */
+        const CrRgba *lm = lm_mode
+            ? gm_lightmap_lut(lm_lut, &st, g_clock.world_time, runtime.dimension)
+            : NULL;
+        int ntris = render_world(&fb, &cam, &mv, &atlas, tris, day, &uw, lm);
         bench_stamp(7);
 
         /* ---- targeted-block selection outline + dig crack decal (windowed) ----

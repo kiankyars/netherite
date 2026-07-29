@@ -173,15 +173,24 @@ static long long fc_texture_tick(long long total_time, int portal_frame) {
 }
 
 /* The frame's lightmap texture: exact updateLightmap texels for the current
- * sun brightness (torch flicker + gamma pinned 0, matching the light state). */
-static const CrRgba *build_lightmap_lut(GmFrameCapture *c, const GmRuntime *r) {
-    if (!c->lm_mode || r->dimension != 0) return NULL;
-    float sun = fc_sun_brightness(&r->sin_table, r->clock.world_time);
+ * sun brightness (torch flicker + gamma pinned 0, matching the light state).
+ * Exported because app/game_main.c's interactive render_world must bind the
+ * SAME texels this capture path binds; one builder, no second arithmetic. */
+const CrRgba *gm_lightmap_lut(CrRgba lut[256], const McSinTable *st,
+                              long long world_time, int dimension) {
+    if (dimension != 0) return NULL;
+    float sun = fc_sun_brightness(st, world_time);
     for (int sl = 0; sl < 16; ++sl)
         for (int bl = 0; bl < 16; ++bl)
-            c->lut[sl * 16 + bl] =
+            lut[sl * 16 + bl] =
                 cr_lightmap_rgba8(cr_lightmap_rgb(0, sl, bl, sun, 0.0f, 0.0f));
-    return c->lut;
+    return lut;
+}
+
+static const CrRgba *build_lightmap_lut(GmFrameCapture *c, const GmRuntime *r) {
+    if (!c->lm_mode) return NULL;
+    return gm_lightmap_lut(c->lut, &r->sin_table, r->clock.world_time,
+                           r->dimension);
 }
 
 static float time_of_day(const GmRuntime *r) {

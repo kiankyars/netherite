@@ -1230,6 +1230,27 @@ pointless until a tape carries them, and the values are per-tick anyway, so a
 window that starts mid-tape needs them on rows rather than the header. This is
 what the canonical tape's `known:12` rain class has been standing in for.
 
+### Windowed play lights entities fullbright
+
+`game/frame_capture.c` fills every `GmEntityView`'s `lm_*` fields after the
+view fills (`lm_lit=1` with the frame LUT texel, or `lm_lit=2` folded outside
+the overworld). `app/game_main.c` has no such loop, so in the windowed path
+mobs keep the `(GmEntityView){0}` that `gm_mobs_fill_views` writes, i.e.
+`lm_lit=0` = fullbright: a mob at night or in a cave is drawn as bright as one
+at noon. Terrain is correct (both paths bind `gm_lightmap_lut`); this is the
+entity half of the same plumbing.
+
+`gm_live_fill_views` (dropped items) is a second, smaller problem: unlike
+`gm_mobs_fill_views` it does not zero the view before writing its fields, and
+both callers declare `GmEntityView ents[]` as an uninitialized stack array. In
+the capture path the `lm_*` loop overwrites the garbage; `skin` and
+`death_ticks` are never written for items on either path. Zeroing it is not a
+free fix: it can move capture-path pixels, so it wants a pixel gate rather than
+a blind edit.
+
+Measured by code reading only. No oracle capture covers windowed output, so
+neither half has a pixel number attached.
+
 ### Remaining isolated render features
 
 - One-frame loading sky after a dimension transfer.
