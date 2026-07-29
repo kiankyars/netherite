@@ -37,6 +37,7 @@ Product name: **netherite**. Trees:
 | Need | Open |
 |------|------|
 | First clone / no oracle-src | `docs/BOOTSTRAP.md` |
+| Headless cloud container (no launcher/GPU/display) | `docs/CLOUD.md` |
 | How to play, VNC, qrl, sweep | `docs/RUNBOOK.md` |
 | Ship criteria / gate status | `docs/GATES.md` |
 | Fidelity procedure | `c/magma/VERIFY.md` |

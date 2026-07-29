@@ -8,6 +8,9 @@ source, the build system, and the verification harnesses are all here; the
 Mojang-derived inputs they reference are regenerated locally, byte-identical,
 from your own Minecraft installation.
 
+On a container with no launcher, no GPU and no display, read `docs/CLOUD.md`
+instead: the C build and the `--quick` pyramid do not need `oracle-src`.
+
 Requirements: JDK 8, `uv`, network on first run. You must own Minecraft
 (https://www.minecraft.net); the game files are fetched by ForgeGradle from
 Mojang's official distribution endpoints exactly as any Forge 1.11.2 mod

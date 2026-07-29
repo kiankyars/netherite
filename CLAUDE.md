@@ -10,6 +10,7 @@ auto-load has a project file; it does not duplicate the full map.
 |-------|------|
 | Commands, gotchas, doc map | `AGENTS.md` |
 | First-clone bootstrap | `docs/BOOTSTRAP.md` |
+| Cloud container bring-up | `docs/CLOUD.md` |
 | Play / VNC / qrl / sweep | `docs/RUNBOOK.md` |
 | Product gates | `docs/GATES.md` |
 | History | `docs/DEVLOG.md` |
