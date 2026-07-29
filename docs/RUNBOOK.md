@@ -49,6 +49,18 @@ bash java/start_vnc_client.sh   # Xvfb :1 + openbox + x11vnc + gradlew runClient
 Product RL path is `c/magma/rl/blaze/` (not the discrete qrl bridge).
 Gates and snapshots: `docs/BOOTSTRAP.md` (RL artifacts section) and `docs/GATES.md`.
 
+## End-game demo (dragon kill on video)
+
+```bash
+uv run --no-project python scripts/demo_dragon.py --seed 42 --frames /tmp/dragon
+```
+
+Drives the `--script` harness to the End, clears the ten crystals, kills the
+dragon and walks the exit portal; nonzero exit unless the run reports `won`.
+It injects an end_portal block and a diamond sword and flies with `set_pose`,
+so it is a demo, not a completion claim - `bash c/magma/game/test_route_e2e.sh`
+is the route that earns the portal with twelve crafted eyes of ender.
+
 ## One-command verification pyramid
 
 ```bash
