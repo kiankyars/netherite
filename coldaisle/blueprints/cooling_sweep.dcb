@@ -1,0 +1,29 @@
+# cooling_sweep - hall10k, swept across cooling capacity.
+#
+# Below about 21 MW of cooling the hall throttles and throughput falls; above
+# the heat load the extra chiller capacity is pure PUE penalty, because plant
+# power is charged against provisioned capacity (core/dc_defs.h DC_COP_Q16).
+# The optimum is the knee, and req/kW is the column that finds it.
+
+room hall power_cap_kw=30000 cool_cap_kw=27000 supply_c=24 spine_gbps=25600
+
+rackgroup gpu_row room=hall racks=500 pdu_cap_kw=48 uplink_gbps=400 recirc=0.12 airflow_kw_per_c=1.8
+rackgroup cpu_row room=hall racks=200 pdu_cap_kw=32 uplink_gbps=100 recirc=0.18 airflow_kw_per_c=2.5
+
+# 8 accelerators per node: 900 W idle, 10.5 kW flat out, liquid-assisted so the
+# die sits about 4 C above inlet per kW.
+nodetype gpu cap_wu=1200 idle_w=900 dyn_w=9600 queue_max=256 txbl_max_kib=16384 rja_c_per_kw=4 t_throttle_c=80 t_max_c=95
+nodetype cpu cap_wu=300  idle_w=150 dyn_w=550  queue_max=512 txbl_max_kib=8192  rja_c_per_kw=25 t_throttle_c=85 t_max_c=100
+
+stage ingest wu=20   bytes_kib=48 next=embed  slo_ms=200
+stage embed  wu=1500 bytes_kib=8  next=rank   slo_ms=1000
+stage rank   wu=120  bytes_kib=4  next=egress slo_ms=300
+
+fill rackgroup=gpu_row type=gpu stage=embed  per_rack=4
+fill rackgroup=cpu_row type=cpu stage=ingest per_rack=24
+fill rackgroup=cpu_row type=cpu stage=rank   per_rack=16
+
+load stage=ingest rps=18000
+
+# One launch per pass advances all six halls: this is what the GPU is for.
+sweep cool_cap_kw target=hall 9000 12000 15000 18000 21000 27000
