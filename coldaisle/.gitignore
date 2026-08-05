@@ -1,9 +1,0 @@
-coldaisle
-coldaisle_cuda
-*.o
-tests/test_units
-tests/test_model
-tests/test_determinism
-tests/test_parity
-*.ppm
-*.csv
